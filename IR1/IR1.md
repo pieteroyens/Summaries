@@ -12,7 +12,16 @@
       - [Inverted Index](#inverted-index)
       - [Constructing an Index](#constructing-an-index)
       - [Updating an Index](#updating-an-index)
-  - [Lecture 3](#lecture-3)
+  - [Lecture 3 Offline Evaluation](#lecture-3-offline-evaluation)
+    - [Evaluation Measures](#evaluation-measures)
+      - [Relevance as a Binary Classifier](#relevance-as-a-binary-classifier)
+      - [Relevance as a non-Binary Classifier](#relevance-as-a-non-binary-classifier)
+        - [(N)DCG:](#ndcg)
+        - [Model-based measure: browsing/positions-based models, RPB](#model-based-measure-browsingpositions-based-models-rpb)
+        - [Model-based measure: document utility](#model-based-measure-document-utility)
+        - [Model-based measure: utility accumulation model](#model-based-measure-utility-accumulation-model)
+    - [Comparisons](#comparisons)
+    - [Collection Construction](#collection-construction)
   - [Lecture 4](#lecture-4)
   - [Lecture 5](#lecture-5)
   - [Lecture 6](#lecture-6)
@@ -202,7 +211,101 @@ When we get new information for our webpages or other information, we have to up
 5. Page deletions: what to do when a page is deleted and we have to remove it from the index?
    1. Method: keep a lists of deleted documents, then we go over the the entire list and delete the from the collection (garbage collection).
 
-## Lecture 3
+## Lecture 3 Offline Evaluation
+
+How do we measure/ quantify how good a retrieval system is? Old techniques relied on the **HiPPO-technique: Highest Paid Person's Opinion**. Improvements have been made since.
+
+We can do user-studies (not coverted), off- and online evaluation. This lecture talks about offline evaluation.
+
+Offline evaluation we proxy a user and ask if the algorithm brought up more relant results than another. The two element we have to test a system:
+
+1. User Queries
+2. Retrieved Documents
+
+and then labels of relevance for each document.
+
+Offline evaluation is made up of three parts: [evaluation measures](#evaluation-measures), [comparisons](#comparisons), [collection construction](#collection-construction).
+
+### Evaluation Measures
+
+There are about 200+ measures, therefor we have to carefully choose which measure to use. 
+
+First, we have to define what a "*relevant*" document is. This can be done in multiple ways and we have to assume the following things about relevance:
+
+1. **Topical**: if both a query and document are about the same topic.
+2. **Binary**: relevant vs. non-relevant
+3. **Independent**: relevant of documet A does not depend on document B
+4. **Stable**: judgements change over time and are never stable
+5. **Consistent**: the relevance labels are consitent across different judges
+6. **Complete**: we have the labels for every document in a collection
+
+#### Relevance as a Binary Classifier
+
+The two metric then are *precision* and *recall*:
+![precision and recall](images/evaluation_precision_recall.png)
+
+When we have a ranked list, how do we turn it into a binary classification problem?
+
+Answer: we look at the *top-k* documents, and see which of the retrieved documents are relevant. We do this for Precision and Recall: Precision/Recall @ k (**P/R@k**). 
+
+A **high precision** means:
+
+- user looks at top results
+- repository is large, with easy to find relevant pages
+- imperfect recall is OK
+
+A **high recall** means:
+
+- users are not satisfied with only top-k documents. Think about patents, legal or medical searches.  
+
+However, these are *set*-metrics, so they don't suit our purposes. We need to use them to a metric that is usefull for a retrieval system.
+
+**Average Precision (AP)** is such a metric and calculated in the following way:
+![AP](images/evaluation_average_precision.png)
+
+AP is the area-under-the-curve of the Precision/Recall Graph:
+![AP Graph](images/evaluation_AP_curve.png)
+
+It gives you a score for a ranking and not just for your binary classification. You always devide by your total number of relevant documents.
+
+#### Relevance as a non-Binary Classifier
+
+##### (N)DCG: 
+
+We can have more relevance labels other than just two (Bing for example has 7). Precision and Recall cannot handle this. A metric that *can* handle this is **Discounted Cumulative Gain (DCG)**.
+
+Intuition behind DCG: when you find a document, how much *utility* does it give and how much effort does it take to find this relevant document? 
+
+The forumla:
+![DCG](images/evaluation_DCG.png)
+
+Non-linear gain: the utility/usefullnes function. This function is exponential because when your document is relevant and at the top, it has alot more effect on the score.
+
+Dicount: the effort to find the document
+
+We need to normalize (range of 0~1) this function because we can then average over queries that have different numbers of relevant documents. We get **NDCG**. You normalize with: optimal DCG, aka the DCG of the documents were ranked optimally by their non-binary rank.
+
+##### Model-based measure: browsing/positions-based models, RPB
+
+Described how users interact with results.
+
+It depends on the position of the document if the users goes to the next one. So the higher a document is, the more chance it has to be viewed. We get a metric called **Rank Biased Precision (RPB)** and is the expected utility at stopping at rank k.
+
+The model:
+![browsing mode](images/evaluation_browsing_model.png)
+
+The metric:
+![browsing mode](images/evaluation_browsing_model_metric.png)
+
+Where $\theta=P(continuing)$. It expresses the probability of *reaching* rank k and *stopping* at rank k.
+
+##### Model-based measure: document utility
+
+##### Model-based measure: utility accumulation model
+
+### Comparisons
+
+### Collection Construction
 
 ## Lecture 4
 
