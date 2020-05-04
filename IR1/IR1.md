@@ -43,7 +43,8 @@ Different **scenarios** include:
 - Entity Search
 - Recommender Systems
 
-Subject of this lecture: ![Some text](images/intro_overview.png)
+Subject of this lecture:
+![Some text](images/intro_overview.png)
 
 ### Crawling
 
