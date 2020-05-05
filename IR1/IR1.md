@@ -26,6 +26,12 @@
       - [Maximum Entropy Method](#maximum-entropy-method)
     - [Collection Construction](#collection-construction)
   - [Week 2, Lecture 4: Query Processing](#week-2-lecture-4-query-processing)
+    - [Query Analysis](#query-analysis)
+    - [Query Processing/ Ranking](#query-processing-ranking)
+      - [First-Phase Query Processing /  Simple Ranking](#first-phase-query-processing--simple-ranking)
+      - [Simple Ranking: Vector Space Model](#simple-ranking-vector-space-model)
+      - [Simple Ranking: Language Modeling in IR](#simple-ranking-language-modeling-in-ir)
+      - [Simple Ranking: BM25](#simple-ranking-bm25)
   - [Lecture 5](#lecture-5)
   - [Lecture 6](#lecture-6)
   - [Lecture 7](#lecture-7)
@@ -387,7 +393,65 @@ Take-away from **offline evaluation**:
 
 ## Week 2, Lecture 4: Query Processing
 
+When we have gotten and cleaned our data, how do we retrieve it? When we get a query, what do we do? We do **query analysis** and **query processing**
 
+### Query Analysis
+
+The pipeline for query analysis/preperation is and should be **the same as the pipeline as you would process you documents**:
+
+- Normalization: lowercasing/tokenization
+- Spelling correction
+- Segmentation
+- Stemming
+- Term expansion
+- etc.
+
+### Query Processing/ Ranking
+
+We have two phases for big collections (10.000+): First- and Second-phase ranking.
+
+**First-phase** ranking is simple ranking and semantic ranking and is done on the entire collection. We are left with ~10.000 documents.
+
+**Second-phase** ranking is Learning to Rank (Complex Ranking) and this is done on the remaning ~10.000 documents.
+
+If we only have a small collection you do not need two phases.
+
+Overview: ![Ranking Overview](images/ranking_query_processing.png)
+
+#### First-Phase Query Processing /  Simple Ranking
+
+Steps:
+
+1. **Matching**: Filtering the documents that contain the words of our query. This can be done by AND/OR operations: we want documents that contain ALL of the words in a query or document or document that at least contain ONE words of the query. **AND operation = Precision**, **OR operation = Recall**.
+2. **Simple Ranking**: will cover this in (sub-)chapters.
+3. Heap: Not menitoned during the lectures.
+
+#### Simple Ranking: Vector Space Model
+
+***Represent* documents as vectors**. To *match* a document with a query we can measure the euclidian distance between the document vector and the query vector and get the: **cosine similarity**.
+
+We say that each element in a vector corresponds to one term. We get the following possible vector representations:
+
+- **One-hot-encoding**: 0's and 1's, simple.
+- **Term frequency**: frequency of each word &rarr; more information than One-hot.![tf](images/tf.png)
+- **Inverse document frequency**: how many document contain the specific term/word. We think: the more documents contain the specific word, the worse it represents a document. This leads us to take the inverse of this frequency. ![idf](images/idf.png)![idf example](images/idf_example.png)
+- **TF-IDF**: a mix of term frequency and inverse document frequency: ![tf-idf](images/tf-idf.png)
+
+#### Simple Ranking: Language Modeling in IR
+
+***Represent* documents as probability distributions**. (Usually) using a unigram language model: a joint probability of the sequence of words in a document, which are independent from each-other. Example: ![Language model example](images/lm_example.png)
+
+**In other words**: documents are represented as probability distributions, specifically as a multinomial distribution over words.
+
+**Matching**: we match a document with a query, both represented as distributions, by calculating the *KL-Divergence*.
+
+**Problem**: with this is when a word occurs zero times in a document and we multiply it with another term, we get a probability of zero for the entire document.
+
+**Solution**: (Laplace) Smoothing
+
+#### Simple Ranking: BM25
+
+We represent a document as a abstract score. The formula is abitrary to know. There is no intuition to be gathered here except that it stand for **Best Match 25**, it happend to be the 25th version and this worked the best.
 
 ## Lecture 5
 
