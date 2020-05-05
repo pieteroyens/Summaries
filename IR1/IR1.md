@@ -1,6 +1,6 @@
 # Summary IR1 UvA, 2019-2020
 - [Summary IR1 UvA, 2019-2020](#summary-ir1-uva-2019-2020)
-  - [Lecture 1 & 2](#lecture-1--2)
+  - [Week 1: Lecture 1 & 2](#week-1-lecture-1--2)
     - [Introduction](#introduction)
     - [Crawling](#crawling)
     - [Text Analysis](#text-analysis)
@@ -12,17 +12,20 @@
       - [Inverted Index](#inverted-index)
       - [Constructing an Index](#constructing-an-index)
       - [Updating an Index](#updating-an-index)
-  - [Lecture 3 Offline Evaluation](#lecture-3-offline-evaluation)
+  - [Week 2: Lecture 3, Offline Evaluation](#week-2-lecture-3-offline-evaluation)
     - [Evaluation Measures](#evaluation-measures)
       - [Relevance as a Binary Classifier](#relevance-as-a-binary-classifier)
       - [Relevance as a non-Binary Classifier](#relevance-as-a-non-binary-classifier)
         - [(N)DCG:](#ndcg)
         - [Model-based measure: browsing/positions-based models, RPB](#model-based-measure-browsingpositions-based-models-rpb)
-        - [Model-based measure: document utility](#model-based-measure-document-utility)
-        - [Model-based measure: utility accumulation model](#model-based-measure-utility-accumulation-model)
-    - [Comparisons](#comparisons)
+        - [Model-based measure: document utility, Cascade Model, Expected Effort](#model-based-measure-document-utility-cascade-model-expected-effort)
+        - [Novelty-based measures](#novelty-based-measures)
+        - [Issues with previous measures, Session measures](#issues-with-previous-measures-session-measures)
+  - [Week 2: Lecture 4, Meta-Evaluation](#week-2-lecture-4-meta-evaluation)
+    - [Comparing Metrics](#comparing-metrics)
+      - [Maximum Entropy Method](#maximum-entropy-method)
     - [Collection Construction](#collection-construction)
-  - [Lecture 4](#lecture-4)
+  - [Week 2, Lecture 4: Query Processing](#week-2-lecture-4-query-processing)
   - [Lecture 5](#lecture-5)
   - [Lecture 6](#lecture-6)
   - [Lecture 7](#lecture-7)
@@ -32,7 +35,7 @@
   - [Lecture 11](#lecture-11)
   - [Lecture 12](#lecture-12)
 
-## Lecture 1 & 2
+## Week 1: Lecture 1 & 2
 
 ### Introduction
 
@@ -211,7 +214,7 @@ When we get new information for our webpages or other information, we have to up
 5. Page deletions: what to do when a page is deleted and we have to remove it from the index?
    1. Method: keep a lists of deleted documents, then we go over the the entire list and delete the from the collection (garbage collection).
 
-## Lecture 3 Offline Evaluation
+## Week 2: Lecture 3, Offline Evaluation
 
 How do we measure/ quantify how good a retrieval system is? Old techniques relied on the **HiPPO-technique: Highest Paid Person's Opinion**. Improvements have been made since.
 
@@ -287,7 +290,7 @@ We need to normalize (range of 0~1) this function because we can then average ov
 
 ##### Model-based measure: browsing/positions-based models, RPB
 
-Described how users interact with results.
+Described how users interact with results, aka it's a *model of the user*.
 
 It depends on the position of the document if the users goes to the next one. So the higher a document is, the more chance it has to be viewed. We get a metric called **Rank Biased Precision (RPB)** and is the expected utility at stopping at rank k.
 
@@ -299,15 +302,92 @@ The metric:
 
 Where $\theta=P(continuing)$. It expresses the probability of *reaching* rank k and *stopping* at rank k.
 
-##### Model-based measure: document utility
+**How** do we choose $\theta$ or how is this metric better than NDCG? We can use the logs of our search engine and we can look at the clickthrough rates for every position. We can than choose a $\theta$ such that RBP matches the curve of the clickthrough rate best.
 
-##### Model-based measure: utility accumulation model
+**Why** do we want this, why do we want a user based model? Because we *care* about users and want to align with them.
 
-### Comparisons
+**What doesn't work** in RBP: it does not capture the relevance of a document on the position. When two documents equally relevant and are in 1st and 2nd place, we still would see a skewed probability to reach the document in the second position. This is not captured by this model.
+
+##### Model-based measure: document utility, Cascade Model, Expected Effort
+
+The cascade model simulates the probability of going to the next document based on the utility of the current document.
+
+The model:
+![Cascade Model](images/evaluation_cascade_model.png)
+Where $\theta_2,\theta_1,\theta_0$ are the probabilities of moving to the next document when a document is highly, somewhat or not relevant.
+
+The **main difference with RBP**: no moving on only depends on what you have seen so far.
+
+$\theta$ is chosen differently this time and is pre-computed as such:
+
+$\theta_i:=\frac{2^{(1-rel_i)}-1}{2^{\text{max rel}}}$
+
+So the more relevant a document is, the more probability of stopping.
+
+This gives rise to a new metric, **Expected Effort**:
+
+$ERR=\sum_{r=1}^{n}(\underbrace{\prod_{i=1}^{r-1}(1-\theta_i)\theta_i}_{\text{prob of reaching rank r}})\frac{1}{r}$
+
+$\theta$ is in the original paper pre-defined and unlike the **RBP** where we can compute them based on the CTR.
+
+##### Novelty-based measures
+
+There are also click and time model-based measures, which will not go into now.
+
+##### Issues with previous measures, Session measures
+
+All the previously mentioned measures have something called the **redundancy problem**: when we optimize for these measures, we get that the first relevant document contains usefull information but all documents after with the same information are worth less to the user. This is called **redundant information**.
+
+We also have no **diversity** in the search results. A system does not know beforhand the user's intent. When a search result is **diverse** we cater to a space of possible user intents.
+
+A **solution**: we gather different user intents, and then let annotators rank documents for each different intent. Every intent is treated as equal.
+
+we get a new metric **$\alpha$-nDCG**: generalization of nDCG, that accounts for *novelty* and *diveristy*. Where $\alpha$
+
+![alpha nDGC](images/evauation_alpha_ndcg.png)
+
+There is **not a set way** to find intents.
+
+All previous evaluation metric are defined on a **single query**, not a session or search history. However, we do want to optimize for a session. There exists **session based metrics**. In here we don't have query/document pairs but instead topic/collection pairs. You then need a metric that takes everything into account. It gives rise the the **Session DCG**. You have a score for each search in a session, and your final score is the sum of scores.
+
+## Week 2: Lecture 4, Meta-Evaluation
+
+### Comparing Metrics
+
+Meta-Evaluations not discussed:
+
+- based on query logs: 
+- side-by-side: predicting choice when results are side-by-side
+- discriminitive power: the powerfullness of a test (statistical significance)
+
+How do evaluate objective functions? We focus on the **informativeness** of a metric: the ability to train a system when we use an objective function, aka how **informative** a objective function is to the system.
+
+**Intuition**: tells us how good a metric for a specific problem is.
+
+**Example**: when we have a system that only cares for P@1, and the model improves by putting a document that needs to be at position 1, from position 10 to 5 (good move), the metric P@1 is not informative. Since, both position 10 and 5, for the metric P@1 are equally bad.
+
+#### Maximum Entropy Method
+
+Don't understand quite well, may have to revisit.
+
+**Framework/How** do we find a metric that is more informative? When we have the *value* of a metric, we should be able to tell with more certainty the probability of each document that it is relevant for a given query result. We do this by measuring randomness/**Entropy**, and want to maximaize Entropy under the constraint of our metric value.
 
 ### Collection Construction
 
-## Lecture 4
+When we have a problem, sometimes there is no collection (training, validation, test) of queries and relevant results. How do we build these collections?
+
+We need three components:
+
+1. Documents: the type of things we want to retrieve (film, image, webpage, etc.)
+2. Queries: collecting queries from users and we can generate topics to put queries under if we have a search problem. If you have a filtering problem, you would have a different type of query.
+3. Labels: if you have an extremely large collection, you cannot label each document. You want to have the labeled collection be reusable (= useable when we want to apply other objective functions). To have this guarantee, you need to label everything. There are no theoretical guarantees but only practical guarantees for solutions for this problem: competitions are organized. In these systems are built and create rankings for of documents. These rankings are cutt-off at depth K, and human judges judge each document as (non-)relevant. This is call** depth-K pooling**: ![Depth K Pooling](images/evaluation_depthk.png). For neural models you also have techniques called **Uniform Random Sampling** and **Stratief Random Sampling**. (Need to rewatch lecture for last two technqiues).
+
+Take-away from **offline evaluation**:
+![Offline evaluation take-away](images/evaluation_offline_takeaway.png)
+
+## Week 2, Lecture 4: Query Processing
+
+
 
 ## Lecture 5
 
