@@ -318,7 +318,7 @@ Where $\theta_2,\theta_1,\theta_0$ are the probabilities of moving to the next d
 
 The **main difference with RBP**: no moving on only depends on what you have seen so far.
 
-$\theta$ is chosen differently this time and is pre-computed as such:
+<img src="https://render.githubusercontent.com/render/math?math=\theta">$\theta$ is chosen differently this time and is pre-computed as such:
 
 $\theta_i:=\frac{2^{(1-rel_i)}-1}{2^{\text{max rel}}}$
 
