@@ -48,12 +48,21 @@
       - [Listwise Approach: LambdaRank](#listwise-approach-lambdarank)
       - [Other Approaches: ListNet, ListMLE](#other-approaches-listnet-listmle)
     - [LTR Recap](#ltr-recap)
-  - [Week 4: Lecture 7](#week-4-lecture-7)
-  - [Week 4: Lecture 8](#week-4-lecture-8)
-  - [Week 5: Lecture 9](#week-5-lecture-9)
-  - [Week 5: Lecture 10](#week-5-lecture-10)
-  - [Week 6: Lecture 11](#week-6-lecture-11)
-  - [Week 6: Lecture 12](#week-6-lecture-12)
+  - [Week 4, Lecture 7: IR-User Interaction](#week-4-lecture-7-ir-user-interaction)
+    - [Online evaluation](#online-evaluation)
+      - [A/B Testing](#ab-testing)
+      - [Interleaving](#interleaving)
+    - [Interaction Models](#interaction-models)
+      - [Basic Click Models](#basic-click-models)
+        - [Position-based model](#position-based-model)
+        - [Cascade model](#cascade-model)
+      - [Parameter Estimation for Click Models](#parameter-estimation-for-click-models)
+      - [Applications of Click Models](#applications-of-click-models)
+  - [Week 4, Lecture 8:](#week-4-lecture-8)
+  - [Week 5, Lecture 9:](#week-5-lecture-9)
+  - [Week 5, Lecture 10](#week-5-lecture-10)
+  - [Week 6, Lecture 11](#week-6-lecture-11)
+  - [Week 6, Lecture 12](#week-6-lecture-12)
 
 ## Week 1: Lecture 1 & 2
 
@@ -627,14 +636,147 @@ Using probabistic models for ranking, which are differentiable. (Should look at 
 ### LTR Recap
 ![LTR Recap](images/Offline_LTR_Recap.png)
 
-## Week 4: Lecture 7
+## Week 4, Lecture 7: IR-User Interaction
 
-## Week 4: Lecture 8
+How do users interact with systems?
+  
+- Item selection
+- We give it queries
+- Give attention (mouse movements, scrolling, clicks)
+- Like/Favorite
+- Timing between user actions
+- Closing of browser
+- Etc.
 
-## Week 5: Lecture 9
+We mainly focus on clicks. They show the interest of the user. However, clicks are becoming less important due to position bias and sometimes it already shows the relevant information without the need to click.
 
-## Week 5: Lecture 10
+There is no clear understanding if many/few clicks(interactions) are good or bad. Clicks and other interactions are **ambiguous**. Then, why do we need them? We can use them for:
 
-## Week 6: Lecture 11
+- Evaluate IR system
+- Improve IR system
 
-## Week 6: Lecture 12
+### Online evaluation
+
+#### A/B Testing
+
+We have two different version of a new system. We assign a small percentage (~0.5%/0.5%) of users to each of the version and we measure the interactions we are interested in for a certain amount of time. If we want more clicks, the system that gets more clicks wins.
+
+**Practical considerations**:
+
+- Choosing metrics
+- Control extraneous factors
+- Estimate adequate sample size
+- Choose time period T (~2+ weeks)
+- Novelty Impact
+
+**Pros**:
+
+- Feedback from Real-users
+- We don't need labeled data
+- Can evaluate any change to the system
+
+**Cons**:
+
+- Variance between users
+- Not very sensitive
+- Needs many observations to get statistical significance
+
+#### Interleaving
+
+We have two different versions of a new system, but we mix the results of each system together for a given query. The user then sees the interleaved ranking (unknowing from which system it comes) and the user does it's thing.
+
+If the user then clicked on more links of system A, then system A won and vice versa.
+
+How results are mixed is called **mixing policy**.
+
+How a system is judged better is called **scoring rule**.
+
+**Pros**:
+
+- Highly sensitive
+- Users are not split up in different groups, so we need less observations
+
+**Cons**:
+
+- Evaluation ranking only
+- only doucment-level metrics
+
+### Interaction Models
+
+Different types of models to model search interactions:
+
+- Click models
+- Models of mouse hovering
+- Models of time between user actions
+
+#### Basic Click Models
+
+##### Position-based model
+
+The probability of a click depends on the position.
+
+There are multiple probabilities:
+
+- Examination: if we read a result snippet, this **depends on the rank**.
+- Attractiveness: if we like the snippet after reading, this **doesn't depend on the rank**.
+- Click: if we have examined a snippet and are attracted by it.
+
+We get: ![Position Based Click Model](images/click_model_position_based.png)
+
+**Pros**:
+
+- Examination
+- Attractiveness
+
+**Cons**:
+
+- It only considers the position of a result
+- Doesn't model that we may have already found good information
+
+##### Cascade model
+
+The probability of a click depends on what happens before
+
+We do not skip results, so it assumes a user goes over every document in the list. If a click happens, we stop. If a click doesn't happen, we continue examining
+
+We get the following probabilities:![Click Model Cascade](images/click_model_cascade.png)
+
+Now the examination of the next document depends on the previous.
+
+**Pros**:
+
+- Examination at document position r depends on the examinations and clicks of all docouments above position r
+
+**Cons**:
+
+- Only one click is allowed in this model
+
+#### Parameter Estimation for Click Models
+
+A model is good when it reflects the data. We can compute the **maximum likelhiood estimation** or we can de **expectation-maximization** (E-step and M-step).
+
+#### Applications of Click Models
+
+Possible applications:
+
+- simulating user
+- using parpameters as features in ranking
+- We can get evaluation metrics
+
+Based on the probability of a click, we can get **Expected Reciprocal Rank (ERR)**:
+
+![ERR](images/ERR.png)
+
+where $1/r$ is that we are satisfied at rank $r$. From the click model, we can get $P(S_r = 1)$, which is the probability that we are satisfied at rank $r$.
+
+
+
+## Week 4, Lecture 8: 
+
+## Week 5, Lecture 9: 
+
+## Week 5, Lecture 10
+
+## Week 6, Lecture 11
+
+## Week 6, Lecture 12
