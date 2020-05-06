@@ -40,6 +40,13 @@
       - [Word Embeddings](#word-embeddings)
       - [Document Embeddings](#document-embeddings)
   - [Week 3: Lecture 6, Offline Learning to Rank](#week-3-lecture-6-offline-learning-to-rank)
+    - [LTR Preliminaries](#ltr-preliminaries)
+    - [LTR Goals](#ltr-goals)
+      - [Pointwise Approach](#pointwise-approach)
+      - [Pairwise Approach](#pairwise-approach)
+      - [Pairwise Approach: RankNet](#pairwise-approach-ranknet)
+      - [Listwise Approach: LambdaRank](#listwise-approach-lambdarank)
+      - [Other Approaches: ListNet, ListMLE](#other-approaches-listnet-listmle)
   - [Week 4: Lecture 7](#week-4-lecture-7)
   - [Week 4: Lecture 8](#week-4-lecture-8)
   - [Week 5: Lecture 9](#week-5-lecture-9)
@@ -330,13 +337,13 @@ Where $\theta_2,\theta_1,\theta_0$ are the probabilities of moving to the next d
 
 The **main difference with RBP**: no moving on only depends on what you have seen so far.
 
-<img src="https://render.githubusercontent.com/render/math?math=\theta">$\theta$ is chosen differently this time and is pre-computed as such:
+$\theta$ is chosen differently this time and is pre-computed as such:
 
 $\theta_i:=\frac{2^{(1-rel_i)}-1}{2^{\text{max rel}}}$
 
 So the more relevant a document is, the more probability of stopping.
 
-This gives rise to a new metric, **Expected Effort**:
+This gives rise to a new metric, **Expected Effort/ Expected Reciprocal Rank**:
 
 $ERR=\sum_{r=1}^{n}(\underbrace{\prod_{i=1}^{r-1}(1-\theta_i)\theta_i}_{\text{prob of reaching rank r}})\frac{1}{r}$
 
@@ -525,6 +532,95 @@ We still take the **avarage** of the word embeddings but we add a paragraph embe
 ![document embedding matching](images/neural_model_matching.png)
 
 ## Week 3: Lecture 6, Offline Learning to Rank
+
+Documents have more signals than just words to match it with queries. We can have things like popularity, language, clicks, etc. We can use machine learning to use these features and create rankings of documents.
+
+### LTR Preliminaries
+
+**Representation**: Documents and queries are represented as numerical vectors
+
+**Prediction**: A ranking model takes in a vector and maps it from a vector to a real-valued score. Based on these scores, we sort the documents.
+
+**Features**:
+
+- Document-only: document length etc.
+- Document Query Combination: BM25 etc.
+- Query-only: Query length etc.
+
+**Training methods**:
+
+- Offline / Supervised LTR: learned from annotated data but it's hard to get the labels
+- Online / Counterfactual: learn from user interactions, easy to get but hard to interpret.
+
+### LTR Goals
+
+![Offline LTR Goals](images/offline_LTR_goals.png)
+
+First, we need a appropriate *loss function*. The main two loss functions in ML are:
+
+1. Regresion
+2. Classification
+
+When we have scores we can use the **softmax function** in classification models or the **cross entropy** as our loss function of two probability distributions over a discrete set of events. We then use the cross entropy loss to optimize the model.
+
+Now, how do we use the losses? We have multiple approaches
+
+#### Pointwise Approach
+
+We choose between two different loss functions:
+
+1. **Regression loss** gives us a mean squared error loss
+2. **Classification loss** gives use the softmax and cross entropy loss
+
+**Problems**: this would not work on a large set of documents because of 
+
+- **class imbalance**, many irrelevant vs. few relevant
+- **query level feature normalization**, distribution of features differs greatly per query
+
+These can be overcome (normalization, class re-weighing), but there is a much bigger issue: we try to score each document independently and then try to rank them, so **we are not optimizing the ranking quality**.
+
+**Ranking is not a regression or classification problem**.
+
+#### Pairwise Approach
+
+Instead of looking just at the document-level, **we consider pairs of documents**. 
+
+**Naive Implementation**: compare each pair of documents with each-other.
+
+**Problems**: Quadratic Complexity during ranking time and we would need to pair-references have to be aggregated and can lead to paradoxical situations.
+
+**Solution**: We don't change the model, we *change the loss function*. We get ![Pairwise Loss](images/pairwise_loss.png)
+
+**Intuition**: Sum over all pairs where one document is more relevant than another. We take the difference in scores and put that into a loss function. This still has quadratic complexity but this is during training time, not ranking time.
+
+**Possible Pairwise loss functions**: ![Pairwise Loss Functions](images/pairwise_loss_functions.png)
+
+#### Pairwise Approach: RankNet
+
+It's a pairwise approach. It interprets the score differences as probabilities. We the difference in scores is run through a sortof softmax function. When have two documents we compute this score/ probability for both orders of documents, and we then compute the cross-entropy &larr; Loss function. We get the following: ![RankNet Loss Function](images/RankNet_loss_function.png)
+
+In the derivative of the loss, we have lambda's which act like forces pushing pairs of documents apart or together: ![RankNet Lambdas](images/RankNet_lambdas.png)
+
+**Problems**: the probabilty function is not real and it treats every document pair as equally important. However, we care more about some documents than others and would prefer to see those correctly ordered then less important ones.
+
+**Solution**: Listwise Approach
+
+#### Listwise Approach: LambdaRank
+
+The goal is to opitimze the ranking quality. We have metrics such as *NDCG*, *ERR*, *Precision*, etc. but how do we optimize for these metrics? They are non-differentiable metrics.
+
+LambdaRank makes the following obervations:
+
+- We do not need the costs of the loss functions, only the gradients: we do not care about the loss, only its gradient.
+- Gradients should be bigger for pairs of documents that produces a bigger impact on the loss function (NDCG) by swaping positions: when we swap documents and get a better NDCG we know that swap is more important.
+
+In LambdaRank we then do the following: ![LambdaRank Loss](images/LambdaRank_loss.png)
+
+I.e. we multiply the lambda from RankNet with the difference of NDCG scores of swapping two documents. You can do this for all other metrics.
+
+#### Other Approaches: ListNet, ListMLE
+
+Using probabistic models for ranking, which are differentiable. (Should look at the lecture better for these methods.)
 
 ## Week 4: Lecture 7
 
