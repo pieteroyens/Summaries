@@ -29,17 +29,23 @@
     - [Query Analysis](#query-analysis)
     - [Query Processing/ Ranking](#query-processing-ranking)
       - [First-Phase Query Processing /  Simple Ranking](#first-phase-query-processing--simple-ranking)
-      - [Simple Ranking: Vector Space Model](#simple-ranking-vector-space-model)
-      - [Simple Ranking: Language Modeling in IR](#simple-ranking-language-modeling-in-ir)
-      - [Simple Ranking: BM25](#simple-ranking-bm25)
-  - [Lecture 5](#lecture-5)
-  - [Lecture 6](#lecture-6)
-  - [Lecture 7](#lecture-7)
-  - [Lecture 8](#lecture-8)
-  - [Lecture 9](#lecture-9)
-  - [Lecture 10](#lecture-10)
-  - [Lecture 11](#lecture-11)
-  - [Lecture 12](#lecture-12)
+      - [Simple Ranking: Term based Vector Space Model](#simple-ranking-term-based-vector-space-model)
+      - [Simple Ranking: Term based Language Modeling](#simple-ranking-term-based-language-modeling)
+      - [Simple Ranking: Term based BM25](#simple-ranking-term-based-bm25)
+  - [Week 3: Lecture 5, Semantic Based Retrieval](#week-3-lecture-5-semantic-based-retrieval)
+    - [Simple Ranking: Topic based Modeling](#simple-ranking-topic-based-modeling)
+    - [Simple Ranking: Latent Semantic Indexing/ Analysis, Vector models](#simple-ranking-latent-semantic-indexing-analysis-vector-models)
+    - [Intermezzo: which technique works better](#intermezzo-which-technique-works-better)
+    - [Simple Ranking: Nerual Models](#simple-ranking-nerual-models)
+      - [Word Embeddings](#word-embeddings)
+      - [Document Embeddings](#document-embeddings)
+  - [Week 3: Lecture 6, Offline Learning to Rank](#week-3-lecture-6-offline-learning-to-rank)
+  - [Week 4: Lecture 7](#week-4-lecture-7)
+  - [Week 4: Lecture 8](#week-4-lecture-8)
+  - [Week 5: Lecture 9](#week-5-lecture-9)
+  - [Week 5: Lecture 10](#week-5-lecture-10)
+  - [Week 6: Lecture 11](#week-6-lecture-11)
+  - [Week 6: Lecture 12](#week-6-lecture-12)
 
 ## Week 1: Lecture 1 & 2
 
@@ -426,7 +432,7 @@ Steps:
 2. **Simple Ranking**: will cover this in (sub-)chapters.
 3. Heap: Not menitoned during the lectures.
 
-#### Simple Ranking: Vector Space Model
+#### Simple Ranking: Term based Vector Space Model
 
 ***Represent* documents as vectors**. To *match* a document with a query we can measure the euclidian distance between the document vector and the query vector and get the: **cosine similarity**.
 
@@ -437,34 +443,97 @@ We say that each element in a vector corresponds to one term. We get the followi
 - **Inverse document frequency**: how many document contain the specific term/word. We think: the more documents contain the specific word, the worse it represents a document. This leads us to take the inverse of this frequency. ![idf](images/idf.png)![idf example](images/idf_example.png)
 - **TF-IDF**: a mix of term frequency and inverse document frequency: ![tf-idf](images/tf-idf.png)
 
-#### Simple Ranking: Language Modeling in IR
+#### Simple Ranking: Term based Language Modeling
 
 ***Represent* documents as probability distributions**. (Usually) using a unigram language model: a joint probability of the sequence of words in a document, which are independent from each-other. Example: ![Language model example](images/lm_example.png)
 
 **In other words**: documents are represented as probability distributions, specifically as a multinomial distribution over words.
 
-**Matching**: we match a document with a query, both represented as distributions, by calculating the *KL-Divergence*.
+**Matching**: we can match a document with a query, both represented as distributions by
 
-**Problem**: with this is when a word occurs zero times in a document and we multiply it with another term, we get a probability of zero for the entire document.
+1. calculating the *KL-Divergence*
+2. Query likelihood matching: ![Quey Likelihood Matching](images/query_llh_matching.png)
 
-**Solution**: (Laplace) Smoothing
+**Problem**: with this is when a word that occurs in a query occurs zero times in a document and we multiply it with another term, we get a probability of zero for the entire document.
 
-#### Simple Ranking: BM25
+**Solution**: (Laplace) Smoothing, Jelinek-Mercer Smoothing, Dirichlet Smoothing,
+
+#### Simple Ranking: Term based BM25
 
 We represent a document as a abstract score. The formula is abitrary to know. There is no intuition to be gathered here except that it stand for **Best Match 25**, it happend to be the 25th version and this worked the best.
 
-## Lecture 5
+## Week 3: Lecture 5, Semantic Based Retrieval
 
-## Lecture 6
+In the previous week, all the models are purely term based. The result is that we fail to capture *semantics*. In semantic based models, we still use the vector and distribution models, though we try to capture semantics.
 
-## Lecture 7
+### Simple Ranking: Topic based Modeling
 
-## Lecture 8
+In topic modeling we assume the following:
 
-## Lecture 9
+- Documents are a multinomial distribution over topics over words.
+- Topics are a multinomial distribution over words.
+- Topics themselves are a multinomial distribution.
 
-## Lecture 10
+So how is a document built up? A document has a length (number of words), imagine that these words are not yet filled in &rarr; they are placeholders. For each placeholders, we sample from the topics, then from the sampled topic we sample a word.
 
-## Lecture 11
+**The problem**: we don't know anything about the topics. How many are there? What are they about? It's a latent variable.
 
-## Lecture 12
+**Solution** Latent Dirichlet Allocation: since words and topics are both multionomial distributions, we use their priors: Dirichlet Distributions. The multionomial distributions are sampled from the Dirichlet Distributions. The number of topics is usually chosen either by hand or by (hierarchical topic) models.
+
+**Choosing Parameters**: We choose random parameters, compute the likelihood and by using *Expectation Maximization* we eventually get the local optimal parameters. We have two steps:
+
+1. *E-step*: define the expected value of the llh function, with resepct to the current estimates of the parameters.
+2. *M-step*: find the parameters that maximize this quantity.
+
+**Matching Documents to Queries**: it's the same as a language model where we transform our document and query to distributions and we calculate the *KL Divergence* or use *Query Likelihood Matching*.
+
+**Intuition**: we try to incorporate the semantics/ dependencies between words. If a document and query share the same topics and also the same words, they must be very similar in meaning.
+
+### Simple Ranking: Latent Semantic Indexing/ Analysis, Vector models
+
+Again, documents are represented as vectors, and every word is a cell in that vector. In this method we use *Singluar Value Decomposition*.
+
+Steps:
+
+1. Perform SVD and low-rank approximation on our collection of documents. With this, we will throw away a lot of singluar values so we end up with a relatively small matrix (~1000 long and wide). This is now our **sementic space**
+2. Given a document and query, we will represent them as vector in the obtained semantic space.
+3. Perform **cosine similarity** on these vectors.
+
+
+### Intermezzo: which technique works better
+
+There is no real answer. Basically you have to implement a technique, test it and get the NDCG score. Then based on this you can decide which works best for the application.
+
+### Simple Ranking: Nerual Models
+
+#### Word Embeddings
+
+Representing words as vector (Word2Vec). But we work with document in IR, not words. So how do we translate word embeddings to our IR space?
+
+We can **avarage** the word embeddings.
+
+**Problem**: the avarage of longer documents lose their meaning.
+
+**Solution**: Document Embeddings
+
+#### Document Embeddings
+
+We still take the **avarage** of the word embeddings but we add a paragraph embedding to the avarage. This paragraph vector is computed by gradient decent. We get the following sheme:
+![paragraph embedding](images/neural_models.png)
+
+**Matching**: how do we match a document embedding to a query? The following way:
+![document embedding matching](images/neural_model_matching.png)
+
+## Week 3: Lecture 6, Offline Learning to Rank
+
+## Week 4: Lecture 7
+
+## Week 4: Lecture 8
+
+## Week 5: Lecture 9
+
+## Week 5: Lecture 10
+
+## Week 6: Lecture 11
+
+## Week 6: Lecture 12
