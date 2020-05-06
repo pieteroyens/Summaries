@@ -47,6 +47,7 @@
       - [Pairwise Approach: RankNet](#pairwise-approach-ranknet)
       - [Listwise Approach: LambdaRank](#listwise-approach-lambdarank)
       - [Other Approaches: ListNet, ListMLE](#other-approaches-listnet-listmle)
+    - [LTR Recap](#ltr-recap)
   - [Week 4: Lecture 7](#week-4-lecture-7)
   - [Week 4: Lecture 8](#week-4-lecture-8)
   - [Week 5: Lecture 9](#week-5-lecture-9)
@@ -621,6 +622,10 @@ I.e. we multiply the lambda from RankNet with the difference of NDCG scores of s
 #### Other Approaches: ListNet, ListMLE
 
 Using probabistic models for ranking, which are differentiable. (Should look at the lecture better for these methods.)
+
+
+### LTR Recap
+![LTR Recap](images/Offline_LTR_Recap.png)
 
 ## Week 4: Lecture 7
 
