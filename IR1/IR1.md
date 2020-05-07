@@ -82,8 +82,20 @@
       - [Dueling Bandit Gradient Descent (DBGD)](#dueling-bandit-gradient-descent-dbgd)
       - [Reusing Historical Interactions](#reusing-historical-interactions)
       - [Multileave Gradient Descent](#multileave-gradient-descent)
-  - [Week 5, Lecture 10](#week-5-lecture-10)
-  - [Week 6, Lecture 11](#week-6-lecture-11)
+      - [Problem of Dueling Bandit Gradient Descent](#problem-of-dueling-bandit-gradient-descent)
+      - [Pairwise Differentiable Gradient Descent](#pairwise-differentiable-gradient-descent)
+      - [Online Models Compared](#online-models-compared)
+      - [Future for Online LTR](#future-for-online-ltr)
+      - [Conclustion Online LTR](#conclustion-online-ltr)
+  - [Week 5, Lecture 10: Entity Search](#week-5-lecture-10-entity-search)
+    - [Entity Representation](#entity-representation)
+      - [1-Field Entity (as Probability Distr over words/categories)](#1-field-entity-as-probability-distr-over-wordscategories)
+      - [2-Field Entity (as Probability Distr over words/categories)](#2-field-entity-as-probability-distr-over-wordscategories)
+      - [3-Field Entity (as Probability Distr over words/categories)](#3-field-entity-as-probability-distr-over-wordscategories)
+      - [Field Entity, how to use](#field-entity-how-to-use)
+      - [Knowledge Graph as Tensor (as Vector embedding)](#knowledge-graph-as-tensor-as-vector-embedding)
+    - [Learning to Rank Entities](#learning-to-rank-entities)
+  - [Week 6, Lecture 11: Conversational Search](#week-6-lecture-11-conversational-search)
   - [Week 6, Lecture 12](#week-6-lecture-12)
 
 ___
@@ -114,7 +126,6 @@ Different **scenarios** include:
 - Recommender Systems
 
 **Subject** of this lecture:
-...
 ![lectur overview](images/intro_overview.png)
 
 ### Crawling
@@ -1056,14 +1067,144 @@ We have to move smoothly through the space, aka we take small steps through the 
 **Example**:
 ![Multi Leaving](images/multileaving.png) 
 
+This method is doing it efficiently but it is not an improvement per se. It is at the cost of computational cost.
+
+#### Problem of Dueling Bandit Gradient Descent
+
+- Performance at convergence is worse than offline approaches, even without noise and position bias.
+- The assumption that there is a single optimal model is in practice untrue
+- The assumption that the utility space is smooth w.r.t. to the model weights is in practice untrue
+- Neural Models have no advantage over linear models
+
+#### Pairwise Differentiable Gradient Descent
+
+Different approach than DBGD.
+
+**Intuition**: by taking a *pairwise approach*, maybe you can make it unbiased while still being *differentiable*. Without relying on online evaluation methods (interleaving) and sampling of models.
+
+**How**: by optimizing a ranking model that models documents as a distribution (*Plackett Luce ranking model*). So a scoring model where every document is put through a softmax function with each score. This gives us a *confidence* for each document.
+
+Then, the *pairwise document preference* comes from the fact that when they see a click, they assume a user has seen all documents above the one clicked, and the one below (this comes assumption comes from eye tracking studies). 
+
+However, **this approach is biased**. To correct this they use *randomization*, by swapping two documents. If then, two documents are equally likely, the user will click on both documents at a certain rank. **In other words** when we expect documents that are equally likely and swapped, you would see roughly the same number of clicks at all swapped positions (only looking at the position of the swap).
+
+Example: 
+![Equally Likely](images/equally_likely.png)
+
+**Method Summary**
+![Pairwise GD](images/pairwise_gd.png)
+
+**Visualization**
+![Pairwise Vis](images/Pairwise_vis.png)
+
+#### Online Models Compared
+
+**Emperical Conclusion**:
+![Online Compared](images/online_compared.png)
+
+
+#### Future for Online LTR
+
+DBGD appears to be lacking for optimizing ranking systems
+
+Novel approaches have more potential like Pairwise Diff. GD.
+
+**Emperical**:
+![counterfact vs online](images/online_vs_counterfactual.png)
+
+**Theoretical**:
+![Counterfact vs online theory](images/counterfact_vs_online_theory.png)
+
+#### Conclustion Online LTR
+
+![Online LTR conclusion](images/onlineLTR_conclusion.png)
 
 ___
 
-## Week 5, Lecture 10
+## Week 5, Lecture 10: Entity Search
+
+Techniques in the previous lectures are applied in the next lectures.
+
+**What is an Entity**: uniquely identifiable thing or object (usually people, companies, places). 
+
+**What is special about them**: 
+
+- They are connected/ have relationship to other entities
+- They represent something real
+- They have attributes
+- They have a type
+
+**What is the difference between an Entity and a document?** Document are unstructured while entities are very structured.
+
+Entities can be put into *knowledge graphs*, which is just a repository of entities and their relations and attributes represented as a graph.
+
+Most searches (~41%) are entity searches. Usually in websearch, you run two pipelines because of this. One is the regular search as previously discussed, the second one will be discussed here.
+
+**Challanges for Entity Retrieval**: it is hard to represent entities. We cannoy the same techniques as for document. Also entities are usually short data structures.
+
+**Which techniques from "regular" IR can we keep and which do we have to change**:
+
+- Evaluation: Keep &rarr; same evaluation methods hold
+- Learning to Rank: Keep &rarr; only slight change
+- IR - User interaction: Keep &rarr; only change may be the interface
+- Document Representation & Matching: **Change**
+
+### Entity Representation
+
+Trying to build a textual representation (document).
+
+#### 1-Field Entity (as Probability Distr over words/categories)
+
+You put all the information in attributes in a single field.
+
+#### 2-Field Entity (as Probability Distr over words/categories)
+
+You have a title field (name, title, label) and the content field (other attributes).
+
+#### 3-Field Entity (as Probability Distr over words/categories)
+
+Same a two field but now the connections go into a third "outgoing links" field.
+
+#### Field Entity, how to use
+
+If you want to retrieve an entity structured this way we can, for example, take the BM25, for 3 values: query, title and content/attributes. And then we do what we normally do to retrieve documents.
+
+How can we use all the information of an entity to the fullest? Because we have *term based similarity but also topic based similarity between entities and queries*.
+
+![Entity Example](images/entity_example.png)
+
+We can combine them by summing or multiplying:
+
+![Entity Retrieval](images/entity_retreival.png)
+
+**Intuition**: we can users standard IR techniques to retrieve entities but we need an extra step to convert them to documents.
+
+#### Knowledge Graph as Tensor (as Vector embedding)
+
+We can represent entities as a tensors. It is built-up as such:
+
+- n = all entities
+- m = relations between entities. These relations can be anything (born in, married to, works at, studied at, etc.)
+
+![Entity Tensor](images/entity_as_vector.png)
+
+**What do we do with this?**: we decompose the tensor (SVD or with a neural net) and get a *representation* of one entity. Once we have one matrix representation of one entity, we can use the *cosine similarity*.
+
+### Learning to Rank Entities
+
+Learning to Rank is essentially the same if we have the features. However, some features in entities are different:
+
+- connections: % of outgoing links vs ingoing links for example
+- page rank
+- attributes (if entities share the same attributes)
+- number of categories
+- popularity and importance from a wiki page (using external information)
+- etc.
 
 ___
 
-## Week 6, Lecture 11
+## Week 6, Lecture 11: Conversational Search
+
 
 ___
 
