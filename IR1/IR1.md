@@ -58,11 +58,35 @@
         - [Cascade model](#cascade-model)
       - [Parameter Estimation for Click Models](#parameter-estimation-for-click-models)
       - [Applications of Click Models](#applications-of-click-models)
-  - [Week 4, Lecture 8:](#week-4-lecture-8)
-  - [Week 5, Lecture 9:](#week-5-lecture-9)
+  - [Week 4, Lecture 8: Counterfactual Learning to Rank](#week-4-lecture-8-counterfactual-learning-to-rank)
+    - [Learning from User Interactions](#learning-from-user-interactions)
+    - [Unbiased Learning to Rank](#unbiased-learning-to-rank)
+    - [Counterfactual Learning to Rank](#counterfactual-learning-to-rank)
+      - [Evaluation](#evaluation)
+        - [Naive Evaluation](#naive-evaluation)
+        - [Counterfactual Evaluation: Inverse Propensity Scoring (IPS)](#counterfactual-evaluation-inverse-propensity-scoring-ips)
+      - [Propensity-weighted Learning to Rank](#propensity-weighted-learning-to-rank)
+        - [Possible Different Metrics](#possible-different-metrics)
+      - [Summary](#summary)
+    - [Estimating Position Bias](#estimating-position-bias)
+      - [RandTop-n Algorithm](#randtop-n-algorithm)
+      - [RandPair](#randpair)
+      - [Intervention Harvesting](#intervention-harvesting)
+      - [Jointly Learning and Estimating](#jointly-learning-and-estimating)
+  - [Week 5, Lecture 9: Online LTR](#week-5-lecture-9-online-ltr)
+    - [Online Evaluation, Evaluation between two systems](#online-evaluation-evaluation-between-two-systems)
+      - [Online Evaluation: Team-Draft Interleaving](#online-evaluation-team-draft-interleaving)
+      - [Online Evaluation: Probablistic Interleaving](#online-evaluation-probablistic-interleaving)
+      - [Online Evaluation: Optimized Interleaving](#online-evaluation-optimized-interleaving)
+    - [Online Learning to Rank: how to optimize Rankers](#online-learning-to-rank-how-to-optimize-rankers)
+      - [Dueling Bandit Gradient Descent (DBGD)](#dueling-bandit-gradient-descent-dbgd)
+      - [Reusing Historical Interactions](#reusing-historical-interactions)
+      - [Multileave Gradient Descent](#multileave-gradient-descent)
   - [Week 5, Lecture 10](#week-5-lecture-10)
   - [Week 6, Lecture 11](#week-6-lecture-11)
   - [Week 6, Lecture 12](#week-6-lecture-12)
+
+___
 
 ## Week 1: Lecture 1 & 2
 
@@ -243,6 +267,8 @@ When we get new information for our webpages or other information, we have to up
 5. Page deletions: what to do when a page is deleted and we have to remove it from the index?
    1. Method: keep a lists of deleted documents, then we go over the the entire list and delete the from the collection (garbage collection).
 
+___
+
 ## Week 2: Lecture 3, Offline Evaluation
 
 How do we measure/ quantify how good a retrieval system is? Old techniques relied on the **HiPPO-technique: Highest Paid Person's Opinion**. Improvements have been made since.
@@ -379,6 +405,8 @@ There is **not a set way** to find intents.
 
 All previous evaluation metric are defined on a **single query**, not a session or search history. However, we do want to optimize for a session. There exists **session based metrics**. In here we don't have query/document pairs but instead topic/collection pairs. You then need a metric that takes everything into account. It gives rise the the **Session DCG**. You have a score for each search in a session, and your final score is the sum of scores.
 
+___
+
 ## Week 2: Lecture 4, Meta-Evaluation
 
 ### Comparing Metrics
@@ -478,6 +506,7 @@ We say that each element in a vector corresponds to one term. We get the followi
 #### Simple Ranking: Term based BM25
 
 We represent a document as a abstract score. The formula is abitrary to know. There is no intuition to be gathered here except that it stand for **Best Match 25**, it happend to be the 25th version and this worked the best.
+___
 
 ## Week 3: Lecture 5, Semantic Based Retrieval
 
@@ -540,6 +569,8 @@ We still take the **avarage** of the word embeddings but we add a paragraph embe
 
 **Matching**: how do we match a document embedding to a query? The following way:
 ![document embedding matching](images/neural_model_matching.png)
+
+___
 
 ## Week 3: Lecture 6, Offline Learning to Rank
 
@@ -635,6 +666,8 @@ Using probabistic models for ranking, which are differentiable. (Should look at 
 
 ### LTR Recap
 ![LTR Recap](images/Offline_LTR_Recap.png)
+
+___
 
 ## Week 4, Lecture 7: IR-User Interaction
 
@@ -769,14 +802,268 @@ Based on the probability of a click, we can get **Expected Reciprocal Rank (ERR)
 
 where $1/r$ is that we are satisfied at rank $r$. From the click model, we can get $P(S_r = 1)$, which is the probability that we are satisfied at rank $r$.
 
+___
+
+## Week 4, Lecture 8: Counterfactual Learning to Rank
+
+There are limitations with annotated datasets to train ranking systems:
+
+- Datasets are static
+- expensive and time consuming to get
+- we are not sure if judges agree with the users
+- can be unethical if the data is privacy sensitive (email for example)
+- impossible for small scale problem (personalization for example)
+
+They are used and useful, but not everybody has access to them and are often misaligned with true user preferences. So we need an **alternative of LTR**.
+
+### Learning from User Interactions
+
+We only look at *clicks*.
+
+Pros:
+
+- When you have users, it's free
+- User behavior is indicative of their preferences
+
+**Cons**:
+
+- interaction only give implicit feedback
+
+There are **difficulties**
+
+- **Noise**
+  - Users click for unexpected reasons
+  - Click occur not because of relevancy
+  - Click don't occur eventhough something is relevant
+- **Bias**
+  - Position Bias: high ranked documents get more attention
+  - Item selection bias: interactions ar limited to presented documents
+  - Presentation bias: think of netflix where it has a trailer has a very large display while other movies get a small thumbnail.
+  - Many more
+
+We will focus on **position bias** and present a method called **unbiased learning to rank**.
+
+### Unbiased Learning to Rank
+
+**Goal**: 
+
+- optimize a ranker w.r.t. what the users think is relevant.
+- Avoid being biased by other factors the influence interactions (truly unbiased doesn't exist, we usually say which biases we remove)
+
+There are two approaches: 
+
+- **Online LTR**
+  - Learn by directly interacting with users
+  - Handle biases through randomization of displayed results
+- **Counterfactual LTR**
+  - Learning from historical interactions
+  - Handle biases through using a model of user bevaiour
+
+### Counterfactual Learning to Rank
+
+#### Evaluation
+
+How can we evaluate a ranker before deploying it and without annotated data? With counterfactual evaluation we have **historical interaction data**(clicks) and use this to evaluate a new ranking function.
+
+We do not have full information, aka the true relevance labels for each document. **We only have clicks**. There are two problems with this:
+
+1. A click is a biased and noisy indicator
+2. A missing click does not necessarily mean that a document is not relevant
+
+We get something like this:
+
+![Counterfactual list of clicks](images/counterfactual_list.png)
+
+We can remove noise but hardly remove bias. To do this, we must first decompose a click. A click exists out of **examination** and **relevance**. We get: 
+![Click Decomposed](images/click_decomposed.png)
+
+In other words: if they have observed something and then thinking if it is relevant or not.
+
+##### Naive Evaluation
+
+Assume that clicks are a unbiased relevance signal. But what happens if we use this metric?
+
+This estimator will weigh document according to their examination probabilities.
+
+**Intuition**: the more likely a document is to be observed, the more weight it has.
+
+**Problem/Effect** on evaluation process: we get a self-fulfilling profecy. When we have put a document very high during logging (when the click data was collected) then it will gather, because of **position bias**, a lot of clicks. This model will then again put the same document very high and leads to documents that aren't relevant to be perceived as relevant. And so the estimate will be off
+
+**Solution**: inverse propensity scoring
+
+##### Counterfactual Evaluation: Inverse Propensity Scoring (IPS)
+
+Why is it called counterfactual? We pretend a click happened in a world where every document is always observed.
+
+We get the following function which gives an **unbiased estimate**:
+![Unbiased Estimate](images/unbiased%20estimate.png)
+
+**Intuition**: for every click we are inversely weighing it to the examination probability.
+
+#### Propensity-weighted Learning to Rank
+
+We have the estimates (read: objective functions) from the evaluation, but we **cannot optimize the directly**. They are non-differentiable, so we cannot do SGD.
+
+**Solution**: we can create a **differentiable upper bound**
+
+1. A rank function gives a rank given a document
+2. We describe this as a sum over all other documents in the ranking that have a higher or equal score (example: if you are doc. no. 2 you get a score of 2 because there is one document above you and yourself, aka you get your rank).
+3. We then use a **hinge-loss** to upperbound your rank (a function that always returns something greater than your rank).
+4. We get a function that **is differentiable and great than your rank**.
+
+##### Possible Different Metrics
+
+- Sigmoid-like bound
+- Average Relevance Position (unbiased estimator and upper bound)
+- DCG (unbiased estimator and lower bound)
+
+#### Summary
+
+![cfltr](images/cfltr_summary.png)
+
+### Estimating Position Bias
+
+How do we actually measure a document being observed? How do we actually measure the position bias?
+
+We make the assumption that the **observation probability** only depends on the rank of a document. The probability of obersving a document is called the **propensity score**.
+
+Different methods of estimating this:
+
+#### RandTop-n Algorithm
+
+Every document is equally likely to occur at each rank, then the only thing that matters for a user to click on the document is that rank. We get the following:
+![Rand N](images/randn.png)
+
+**Problem**: it gives a very horrible user experience.
+
+#### RandPair
+
+Choose a pivot at rank k, and swap with a random other document at that rank.
+
+#### Intervention Harvesting
+
+Based on A/B testing. 
+![Intervention](images/interventiontesting.png)
+
+#### Jointly Learning and Estimating
+
+(Have to go back to the lectures, method didn't seem very popular)
+
+____
+
+## Week 5, Lecture 9: Online LTR
+
+A older way to deal with position bias. Originally A/B testing is a good way to counter position bias.
+
+**Pros**:
+
+- Straightforward
+- Able to test many aspects of user behaviour
+
+**Cons**:
+
+- Inefficient (requires a lot of user data)
+- You have to test for a long time
+- You need to be able to recognize individual users
+
+**Online Evaluation** uses the same principle of randomization as A/B testing, but it's more efficient.
+
+### Online Evaluation, Evaluation between two systems
+
+The reason why these following method are called *online* is because we have **control over what to display** to the users. These algorithms decide both what to **display** while also **learning from clicks**. They are more efficient because of the control over what data is gathered.
+
+Some basic requirements:
+
+![online requirements](images/online_requirements.png)
+
+#### Online Evaluation: Team-Draft Interleaving
+
+![online interleaving](images/online_interleaving.png)
+
+The ranker that receives the most clicks is seen as the better ranker (A clicks are equally weighted). To filter out noise you have to repeat the proces of interleaving a lot of times.
+
+**Problem**: some times the systems create a tie and we cannot tell which system is better
+
+#### Online Evaluation: Probablistic Interleaving
+
+It uses **fidelity conditions**: if we are sure one ranker is better than another, we want the evaluation method to agree.
+
+We treat **rankers as probability distributions** over a set of documents. In other other words: we get a ranking of documents and use a "trick" to create a distribution for a ranker, where each document is assigned a certain probability. We get something like:
+
+![Probablistic Interleaving](images/interleaving_prob.png)
+
+Then, during the interleaving phase, when a ranker is chosen, a document is sampled from that distribution (and not the next best document).
+
+We can prove that this method has **fidelity**
+
+The final method:
+
+![Probablistic Interleacing Method](images/prob_interleaving_method.png)
+
+**Pros, Cons, Properties**:
+
+![Prob Interleaving Properties](images/prob_interleaving_properties.png)
+
+(the problems were not very clear to me)
+
+#### Online Evaluation: Optimized Interleaving
+
+It sees **interleaving as an optimization problem**, aka we can optimize it. They saw a problem with probablistic interleaving in that it allowed *every* possible document to be at the higher ranks. This method allows only top documents at the higher rank.
+
+**So which interleavings can we do?**: They only interleavings allows are documents which should be on top of certain other documents, should always be on top when interleaved.
+
+**Which scoring function do we have? / How do we weight each click?**: 
+
+1. Linear Rank Difference
+2. Inverse Rank Difference
+
+**What do we do against Position Bias?**: We assume that we only have position bias. You multiply the probability of a click with a score based the weight of a click. Example:
+![Optimized Interleaving Example](images/optimized_interleaving_example.png)
+
+This becomes a *linear optimization problem*, in which **each interleaving get a probablity**.
+
+**Intuition**: we use randomization to make sure that with random clicks we expect ther would be no winner between two systems. So that means when clicks are not random, we can say with certainty that this is not because of chance.
+
+**Properties**:
+![Optimized Interleaving](images/optimizer_interleaving_properties.png)
 
 
-## Week 4, Lecture 8: 
+### Online Learning to Rank: how to optimize Rankers
 
-## Week 5, Lecture 9: 
+#### Dueling Bandit Gradient Descent (DBGD)
+
+**Intuition**: if online evaluation can tell us if a ranker is better than another, then we can use it to find an improvement of our system.
+
+**How**: sampling model variants and comparing them with interleaving, then the gradient of a model can be estimated w.r.t. user satisfaction.
+
+**Example**: ![Bandit](images/bandit_example.png)
+
+We have to move smoothly through the space, aka we take small steps through the space and eventually we get a optimal set of parameters for our model.
+
+#### Reusing Historical Interactions
+
+**Intuition**: like bandit gradient descent we explore for the optimal parameters but it this is based on what we have seen before (click history).
+
+**How**: sample a large number of rankers and create a candidate set, and use historical interactins to select the most promising candidate for DBGD. So in the previous example image, the model (the arrows in the space) will be sampled from a large collection and looks at previous clicks, and decides which model is best.
+
+**Problems**: for all Online learning, early stopping is impossible (since it's online) and this method degrades in performance over time. It degrades because it does not allow for a ranker to thoroughly explore it's search space and we are not sure it was a good decision to exclude a ranker or not.  
+
+#### Multileave Gradient Descent
+
+**Intuition**: same as DBGD except we now use *multileaving*, which allows for multiple rankers to being compared simultaneously.
+
+**Example**:...
+![Multi Leaving](images/multileaving.png) 
+
+
+___
 
 ## Week 5, Lecture 10
 
+___
+
 ## Week 6, Lecture 11
+
+___
 
 ## Week 6, Lecture 12
