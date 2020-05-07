@@ -114,6 +114,7 @@ Different **scenarios** include:
 - Recommender Systems
 
 **Subject** of this lecture:
+...
 ![lectur overview](images/intro_overview.png)
 
 ### Crawling
@@ -1052,7 +1053,7 @@ We have to move smoothly through the space, aka we take small steps through the 
 
 **Intuition**: same as DBGD except we now use *multileaving*, which allows for multiple rankers to being compared simultaneously.
 
-**Example**:...
+**Example**:
 ![Multi Leaving](images/multileaving.png) 
 
 
